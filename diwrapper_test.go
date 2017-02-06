@@ -52,7 +52,7 @@ func TestNamed(t *testing.T) {
 	b := new(Bbb)
 
 	New().
-		WithNamesObject("aaa", new(Aaa)).
+		WithNamedObject("aaa", new(Aaa)).
 		WithObject(b).
 		InitializeGraph()
 
@@ -74,7 +74,7 @@ func TestInvalidNamed(t *testing.T) {
 	b := new(Bbb)
 
 	New().
-		WithNamesObject("aaa", new(Aaa)).
+		WithNamedObject("aaa", new(Aaa)).
 		WithObject(b).
 		InitializeGraph()
 
@@ -91,8 +91,8 @@ func TestDoubleNamed(t *testing.T) {
 	type Aaa struct{}
 
 	New().
-		WithNamesObject("aaa", new(Aaa)).
-		WithNamesObject("aaa", new(Aaa)).
+		WithNamedObject("aaa", new(Aaa)).
+		WithNamedObject("aaa", new(Aaa)).
 		InitializeGraph()
 
 	assert.Fail(t, "Must panic")

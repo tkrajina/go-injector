@@ -29,7 +29,7 @@ func (i *InjectWrapper) WithObject(object interface{}) *InjectWrapper {
 	return i
 }
 
-func (i *InjectWrapper) WithNamesObject(name string, obj interface{}) *InjectWrapper {
+func (i *InjectWrapper) WithNamedObject(name string, obj interface{}) *InjectWrapper {
 	if _, found := (*i)[name]; found {
 		panic(fmt.Sprintf("Double object with name %s", name))
 	}
