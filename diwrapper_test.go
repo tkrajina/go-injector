@@ -16,7 +16,18 @@ func (s *InitializableStruct) Init() error {
 	return nil
 }
 
-var _ Initializable = (*InitializableStruct)(nil)
+var _ Initializer = (*InitializableStruct)(nil)
+
+type StoppableStruct struct {
+	Stopped bool
+}
+
+func (s *StoppableStruct) Clean() error {
+	s.Stopped = true
+	return nil
+}
+
+var _ Cleaner = (*StoppableStruct)(nil)
 
 func TestSimple(t *testing.T) {
 	s := InitializableStruct{}
@@ -41,6 +52,20 @@ func TestInitialization(t *testing.T) {
 		InitializeGraph()
 
 	assert.NotNil(t, b.Aaa1)
+}
+
+func TestStopping(t *testing.T) {
+
+	obj := StoppableStruct{}
+
+	di := New().
+		WithObjects(&obj).
+		InitializeGraph()
+
+	// This will usually be called in defer:
+	di.Stop()
+
+	assert.True(t, obj.Stopped)
 }
 
 func TestNamed(t *testing.T) {

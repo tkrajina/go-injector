@@ -2,12 +2,18 @@ package diwrapper
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/facebookgo/inject"
 )
 
-type Initializable interface {
+type Initializer interface {
 	Init() error
+}
+
+// Callers are cllaed when everything ends, note that Stop() must be called explicitly.
+type Cleaner interface {
+	Clean() error
 }
 
 type InjectWrapper map[string]*inject.Object
@@ -56,11 +62,27 @@ func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
 		panic(fmt.Sprintf("Error populating graph: %s", err))
 	}
 	for _, obj := range i.AllObjects() {
-		if initializable, is := obj.(Initializable); is {
-			if err := initializable.Init(); err != nil {
+		if initializer, is := obj.(Initializer); is {
+			if err := initializer.Init(); err != nil {
 				panic(fmt.Sprintf("Error initializing privided object %T:%s", obj, err.Error()))
 			}
 		}
 	}
 	return i
+}
+
+func (i *InjectWrapper) Stop() {
+	for _, obj := range i.AllObjects() {
+		if cleaner, is := obj.(Cleaner); is {
+			if err := cleaner.Clean(); err != nil {
+				fmt.Fprintf(os.Stderr, "Error cleaning %T: %+v\n", obj, err)
+			}
+		}
+	}
+}
+
+func (i *InjectWrapper) Stopper() func() {
+	return func() {
+		i.Stop()
+	}
 }
