@@ -51,7 +51,7 @@ func TestInitialization(t *testing.T) {
 		WithObjects(new(Aaa1), b).
 		InitializeGraph()
 
-	assert.NotNil(t, b.Aaa1)
+	assert.NotNil(t, b.Aaa1, "b=%#v", b)
 }
 
 func TestStopping(t *testing.T) {
@@ -76,12 +76,18 @@ func TestNamed(t *testing.T) {
 
 	b := new(Bbb)
 
-	New().
+	di := New().
 		WithNamedObject("aaa", new(Aaa)).
 		WithObject(b).
 		InitializeGraph()
 
 	assert.NotNil(t, b.Aaa)
+
+	aaaObj := di.MustGetNamedObject(&Aaa{}, "aaa")
+	assert.NotNil(t, aaaObj)
+
+	bbbObj := di.MustGetObject(&Bbb{})
+	assert.NotNil(t, bbbObj)
 }
 
 func TestInvalidNamed(t *testing.T) {
