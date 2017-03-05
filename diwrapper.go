@@ -52,7 +52,7 @@ func (i *InjectWrapper) WithObjects(objects ...interface{}) *InjectWrapper {
 }
 
 func (i *InjectWrapper) WithObject(object interface{}) *InjectWrapper {
-	i.log("Adding %T\n", object)
+	i.log("Adding %T", object)
 	o := &inject.Object{Value: object}
 	if err := i.g.Provide(o); err != nil {
 		panic(fmt.Sprintf("Error providing object %T:%s", object, err.Error()))
@@ -62,7 +62,7 @@ func (i *InjectWrapper) WithObject(object interface{}) *InjectWrapper {
 }
 
 func (i *InjectWrapper) WithNamedObject(name string, obj interface{}) *InjectWrapper {
-	i.log("Adding %s: %T\n", name, obj)
+	i.log("Adding %s: %T", name, obj)
 	o := &inject.Object{Name: name, Value: obj}
 	if err := i.g.Provide(o); err != nil {
 		panic(fmt.Sprintf("Error providing named object %s.%T:%s", name, obj, err.Error()))
@@ -72,9 +72,7 @@ func (i *InjectWrapper) WithNamedObject(name string, obj interface{}) *InjectWra
 }
 
 func (i *InjectWrapper) AllObjects() []interface{} {
-	if len(i.g.Objects()) != len(i.objects) {
-		panic(fmt.Sprintf("Invalid objects size: %d!=%d", len(i.g.Objects()), len(i.objects)))
-	}
+	//if len(i.g.Objects()) != len(i.objects) { panic(fmt.Sprintf("Invalid objects size: %d!=%d", len(i.g.Objects()), len(i.objects))) }
 	res := []interface{}{}
 	for _, diObj := range i.objects {
 		res = append(res, diObj.Value)
@@ -104,16 +102,17 @@ func (i InjectWrapper) MustGetObject(sample interface{}) interface{} {
 }
 
 func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
-	i.log("Initializing %d objects\n", len(i.objects))
+	i.log("Initializing %d objects", len(i.objects))
 	if err := i.g.Populate(); err != nil {
 		panic(fmt.Sprintf("Error populating graph: %s", err))
 	}
 	for _, obj := range i.AllObjects() {
 		if initializer, is := obj.(Initializer); is {
-			i.log("Initializing %T\n", obj)
+			i.log("Initializing %T", obj)
 			if err := initializer.Init(); err != nil {
 				panic(fmt.Sprintf("Error initializing privided object %T:%s", obj, err.Error()))
 			}
+			i.log("Initialized %T", obj)
 		}
 	}
 	return i
@@ -122,7 +121,7 @@ func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
 func (i *InjectWrapper) Stop() {
 	for _, obj := range i.AllObjects() {
 		if cleaner, is := obj.(Cleaner); is {
-			i.log("Cleaning %T\n", obj)
+			i.log("Cleaning %T", obj)
 			if err := cleaner.Clean(); err != nil {
 				fmt.Fprintf(os.Stderr, "Error cleaning %T: %+v\n", obj, err)
 			}
