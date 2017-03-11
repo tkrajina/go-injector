@@ -12,7 +12,7 @@ type Initializer interface {
 	Init() error
 }
 
-// Callers are called when everything ends, note that Stop() must be called explicitly.
+// Cleaners are called when everything ends, note that Stop() must be called explicitly.
 type Cleaner interface {
 	Clean() error
 }
