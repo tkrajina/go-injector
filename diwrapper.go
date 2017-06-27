@@ -101,8 +101,28 @@ func (i InjectWrapper) MustGetObject(sample interface{}) interface{} {
 	return i.MustGetNamedObject(sample, "")
 }
 
-func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
+func (i *InjectWrapper) CheckNoImplicitObjects() *InjectWrapper {
+	for _, o := range i.g.Objects() {
+		var oOK bool
+		for _, diwrapperObj := range i.objects {
+			if diwrapperObj.Value == o.Value {
+				oOK = true
+			}
+		}
+		if oOK {
+			fmt.Printf("%T OK\n", o.Value)
+		} else {
+			panic(fmt.Sprintf("%T not explicitly created", o.Value))
+		}
+	}
+
+	return i
+}
+
+// InitializeGraphWithImplicitObjects initializes a graph allowing implicitly created objects. Those are objects not specified with one of the With...() methods.
+func (i *InjectWrapper) InitializeGraphWithImplicitObjects() *InjectWrapper {
 	i.log("Initializing %d objects", len(i.objects))
+
 	if err := i.g.Populate(); err != nil {
 		panic(fmt.Sprintf("Error populating graph: %s", err))
 	}
@@ -115,7 +135,14 @@ func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
 			i.log("Initialized %T", obj)
 		}
 	}
+
 	return i
+}
+
+// InitializeGraph initializes a graph, but fails if an object is not specified with one of the With() methods.
+func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
+	_ = i.InitializeGraphWithImplicitObjects()
+	return i.CheckNoImplicitObjects()
 }
 
 func (i *InjectWrapper) Stop() {

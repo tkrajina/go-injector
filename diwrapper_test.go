@@ -54,6 +54,43 @@ func TestInitialization(t *testing.T) {
 	assert.NotNil(t, b.Aaa1, "b=%#v", b)
 }
 
+func TestInjectionIgnoreNotProvided(t *testing.T) {
+	type Aaa1 struct{}
+	type Bbb1 struct {
+		Aaa1 *Aaa1 `inject:""`
+	}
+
+	b := new(Bbb1)
+	_ = NewDebug().
+		WithObjects(b).
+		InitializeGraphWithImplicitObjects()
+
+	fmt.Printf("b=%#v\n", b)
+	assert.NotNil(t, b.Aaa1, "b=%#v", b)
+}
+
+func TestInjectionNotProvided(t *testing.T) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			assert.Equal(t, fmt.Sprintf("%v", r), "*diwrapper.Aaa1 not explicitly created")
+		}
+	}()
+
+	type Aaa1 struct{}
+	type Bbb1 struct {
+		Aaa1 *Aaa1 `inject:""`
+	}
+
+	b := new(Bbb1)
+	_ = NewDebug().
+		WithObjects(b).
+		InitializeGraph()
+
+	// Must not reach this point, because Aaa1 is not defined in the initialization, must fail
+	t.FailNow()
+}
+
 func TestStopping(t *testing.T) {
 
 	obj := StoppableStruct{}
