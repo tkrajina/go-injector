@@ -61,6 +61,20 @@ func (i *InjectWrapper) WithObject(object interface{}) *InjectWrapper {
 	return i
 }
 
+// WithObjectOrErr is a helper methods to be used with initializers which return a pointer and error
+func (i *InjectWrapper) WithObjectOrErr(object interface{}, err error) *InjectWrapper {
+	if err != nil {
+		panic(err)
+	}
+	i.log("Adding %T", object)
+	o := &inject.Object{Value: object}
+	if err := i.g.Provide(o); err != nil {
+		panic(fmt.Sprintf("Error providing object %T:%s", object, err.Error()))
+	}
+	i.objects = append(i.objects, o)
+	return i
+}
+
 func (i *InjectWrapper) WithNamedObject(name string, obj interface{}) *InjectWrapper {
 	i.log("Adding %s: %T", name, obj)
 	o := &inject.Object{Name: name, Value: obj}
