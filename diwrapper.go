@@ -124,7 +124,7 @@ func (i *InjectWrapper) CheckNoImplicitObjects() *InjectWrapper {
 			}
 		}
 		if oOK {
-			fmt.Printf("%T OK\n", o.Value)
+			i.log("%T OK\n", o.Value)
 		} else {
 			panic(fmt.Sprintf("%T not explicitly created", o.Value))
 		}
