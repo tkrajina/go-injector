@@ -163,10 +163,10 @@ func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
 	return i.CheckNoImplicitObjects()
 }
 
-func (i *InjectWrapper) WithCleanBeforeShutdown(maxDuration time.Duration) *InjectWrapper {
+func (i *InjectWrapper) WithCleanBeforeShutdown(maxDuration time.Duration, sig ...os.Signal) *InjectWrapper {
 	go func() {
 		c := make(chan os.Signal, 1)
-		signal.Notify(c)
+		signal.Notify(c, sig...)
 		s := <-c
 		fmt.Printf("Got signal %v, cleaning before exit...\n", s.String())
 		i.Stop(maxDuration)
