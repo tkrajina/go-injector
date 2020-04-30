@@ -3,7 +3,10 @@ package diwrapper
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"reflect"
+	"sync"
+	"time"
 
 	"github.com/facebookgo/inject"
 )
@@ -21,6 +24,7 @@ type InjectWrapper struct {
 	g *inject.Graph
 	// this slice is here because we want to initialize objects in the order as they are added (after the graph is generated):
 	objects []*inject.Object
+	stopped bool
 }
 
 // NewDebug starts a diwrapper with debug output
@@ -159,20 +163,86 @@ func (i *InjectWrapper) InitializeGraph() *InjectWrapper {
 	return i.CheckNoImplicitObjects()
 }
 
-func (i *InjectWrapper) Stop() {
-	for _, obj := range i.AllObjects() {
-		if cleaner, is := obj.(Cleaner); is {
-			i.log("Cleaning %T", obj)
-			if err := cleaner.Clean(); err != nil {
-				fmt.Fprintf(os.Stderr, "Error cleaning %T: %+v\n", obj, err)
-			}
-		}
-	}
+func (i *InjectWrapper) WithCleanBeforeShutdown(maxDuration time.Duration) *InjectWrapper {
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c)
+		s := <-c
+		fmt.Printf("Got signal %v, cleaning before exit...\n", s.String())
+		i.Stop(maxDuration)
+	}()
+	return i
 }
 
-func (i *InjectWrapper) Stopper() func() {
+func (i *InjectWrapper) Stop(maxDuration time.Duration) {
+	if i.stopped {
+		fmt.Fprintf(os.Stderr, "Stop already called")
+		return
+	}
+	i.stopped = true
+
+	errorsChan := make(chan error, len(i.AllObjects()))
+	wg := new(sync.WaitGroup)
+	for _, obj := range i.AllObjects() {
+		if cleaner, is := obj.(Cleaner); is {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := i.cleanCleanable(cleaner, maxDuration); err != nil {
+					errorsChan <- err
+				}
+			}()
+		}
+	}
+	wg.Wait()
+
+	if len(errorsChan) == 0 {
+		i.log("all cleaned => exit")
+		os.Exit(0)
+	}
+	i.log("NOT all cleaned => exit")
+	os.Exit(1)
+}
+
+func (i *InjectWrapper) cleanCleanable(cleaner Cleaner, maxDuratiDuration time.Duration) error {
+	done := make(chan bool)
+	errorChan := make(chan error)
+	timeoutChan := time.After(maxDuratiDuration)
+
+	go func() {
+		i.log("Cleaning %T", cleaner)
+		defer i.log("Cleaned %T", cleaner)
+		if err := cleaner.Clean(); err != nil {
+			msg := fmt.Sprintf("Error cleaning %T: %+v", cleaner, err)
+			i.log(msg)
+			fmt.Fprintln(os.Stderr, msg)
+			errorChan <- err
+		}
+		done <- true
+	}()
+
+	for true {
+		select {
+		case err := <-errorChan:
+			return err
+		case <-done:
+			return nil
+		case <-timeoutChan:
+			msg := fmt.Sprintf("Cleaning %T took more than %s", cleaner, maxDuratiDuration.String())
+			fmt.Fprintln(os.Stderr, msg)
+			i.log(msg)
+			return fmt.Errorf(msg)
+		case <-time.After(time.Second):
+			i.log("Still cleaning %T\n", cleaner)
+		}
+	}
+
+	return nil
+}
+
+func (i *InjectWrapper) Stopper(maxDuration time.Duration) func() {
 	return func() {
-		i.Stop()
+		i.Stop(maxDuration)
 	}
 }
 
