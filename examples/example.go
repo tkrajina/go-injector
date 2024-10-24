@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tkrajina/diwrapper"
+	"github.com/tkrajina/go-injector/injector"
 )
 
 type EmailSender struct {
@@ -38,7 +38,7 @@ func (es *EmailSender) Clean() error {
 
 func main() {
 	emailSender := new(EmailSender)
-	diwrapper.NewDebug().
+	injector.New().
 		WithObject(emailSender).
 		WithCleanBeforeShutdown(3 * time.Second).
 		InitializeGraph()
