@@ -1,8 +1,9 @@
-package diwrapper
+package injector
 
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -60,20 +61,25 @@ func TestInjectionIgnoreNotProvided(t *testing.T) {
 		Aaa1 *Aaa1 `inject:""`
 	}
 
+	defer func() {
+		r := recover()
+		fmt.Printf("r=%#v\n", r)
+		assert.NotNil(t, r)
+		assert.Equal(t, "No candidates for *injector.Bbb1.Aaa1 (*injector.Aaa1)", r)
+	}()
+
 	b := new(Bbb1)
 	_ = NewDebug().
 		WithObjects(b).
-		InitializeGraphWithImplicitObjects()
-
-	fmt.Printf("b=%#v\n", b)
-	assert.NotNil(t, b.Aaa1, "b=%#v", b)
+		InitializeGraph()
+	t.Fail()
 }
 
 func TestInjectionNotProvided(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			assert.Equal(t, fmt.Sprintf("%v", r), "*diwrapper.Aaa1 not explicitly created")
+			assert.Equal(t, fmt.Sprintf("%v", r), "No candidates for *injector.Bbb1.Aaa1 (*injector.Aaa1)")
 		}
 	}()
 
@@ -100,7 +106,7 @@ func TestStopping(t *testing.T) {
 		InitializeGraph()
 
 	// This will usually be called in defer:
-	di.Stop()
+	di.Stop(time.Minute, false)
 
 	assert.True(t, obj.Stopped)
 }
@@ -149,6 +155,23 @@ func TestInvalidNamed(t *testing.T) {
 	assert.Fail(t, "Must panic")
 }
 
+func TestDoubleType(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in f", r)
+		}
+	}()
+
+	type Aaa struct{}
+
+	New().
+		WithObject(new(Aaa)).
+		WithObject(new(Aaa)).
+		InitializeGraph()
+
+	assert.Fail(t, "Must panic")
+}
+
 func TestDoubleNamed(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -164,4 +187,30 @@ func TestDoubleNamed(t *testing.T) {
 		InitializeGraph()
 
 	assert.Fail(t, "Must panic")
+}
+
+func TestInlineOverwritingFields(t *testing.T) {
+	t.Parallel()
+
+	type Logger struct{}
+	type Aaa struct {
+		Logger *Logger `inject:""`
+	}
+	type Bbb struct {
+		Aaa    `inject:"inline"`
+		Logger *Logger `inject:""`
+	}
+	type Service struct {
+		Bbb `inject:"inline"`
+	}
+	logger := new(Logger)
+	service := new(Service)
+	New().
+		WithObject(service).
+		WithObject(logger).
+		InitializeGraph()
+	assert.Equal(t, logger, service.Logger)
+	assert.Equal(t, logger, service.Bbb.Logger)
+	assert.Equal(t, logger, service.Aaa.Logger)
+	assert.Equal(t, logger, service.Bbb.Aaa.Logger)
 }
