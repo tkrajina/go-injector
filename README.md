@@ -1,4 +1,4 @@
-# Builder and initializer wrapper around Facwbook dependency injector
+# Lightweight golang dependency injector
 
 TODO
 
