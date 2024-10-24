@@ -243,6 +243,8 @@ func (i *Injector) Stop(maxDuration time.Duration, exit bool) {
 	}
 	i.stopped = true
 
+	i.log(i.c, "Cleaning %d objects", len(i.AllObjects()))
+
 	errorsChan := make(chan error, len(i.AllObjects()))
 	wg := new(sync.WaitGroup)
 	for _, obj := range i.AllObjects() {
