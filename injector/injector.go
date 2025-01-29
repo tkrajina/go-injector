@@ -32,7 +32,7 @@ type Injector struct {
 	c                context.Context
 	objects          []*Object
 	stopped          bool
-	initErrorHandler func(err error)
+	initErrorHandler func(obj any, err error)
 	Logger           func(c context.Context, format string, v ...interface{})
 	FatalLogger      func(c context.Context, format string, v ...interface{})
 }
@@ -50,7 +50,7 @@ func New() *Injector {
 	}
 }
 
-func (i *Injector) WithInitErrorHandler(handler func(err error)) *Injector {
+func (i *Injector) WithInitErrorHandler(handler func(obj any, err error)) *Injector {
 	i.initErrorHandler = handler
 	return i
 }
@@ -223,7 +223,7 @@ func (i *Injector) InitializeGraph() *Injector {
 			i.log(i.c, "Initializing %T", obj)
 			if err := initializer.Init(); err != nil {
 				if i.initErrorHandler != nil {
-					i.initErrorHandler(err)
+					i.initErrorHandler(obj, err)
 				}
 				i.logAndPanic(i.c, "Error initializing privided object %T:%s", obj, err.Error())
 			}
