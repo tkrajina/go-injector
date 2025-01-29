@@ -29,11 +29,12 @@ type Cleaner interface {
 
 type Injector struct {
 	// this slice is here because we want to initialize objects in the order as they are added (after the graph is generated):
-	c           context.Context
-	objects     []*Object
-	stopped     bool
-	Logger      func(c context.Context, format string, v ...interface{})
-	FatalLogger func(c context.Context, format string, v ...interface{})
+	c                context.Context
+	objects          []*Object
+	stopped          bool
+	initErrorHandler func(err error)
+	Logger           func(c context.Context, format string, v ...interface{})
+	FatalLogger      func(c context.Context, format string, v ...interface{})
 }
 
 // NewDebug starts a new injector with debug output
@@ -47,6 +48,11 @@ func New() *Injector {
 		c:       context.Background(),
 		objects: []*Object{},
 	}
+}
+
+func (i *Injector) WithInitErrorHandler(handler func(err error)) *Injector {
+	i.initErrorHandler = handler
+	return i
 }
 
 func (i *Injector) WithLogger(logger func(c context.Context, format string, v ...interface{}), fatalLogger func(c context.Context, format string, v ...interface{})) *Injector {
@@ -216,6 +222,9 @@ func (i *Injector) InitializeGraph() *Injector {
 		if initializer, is := obj.(Initializer); is {
 			i.log(i.c, "Initializing %T", obj)
 			if err := initializer.Init(); err != nil {
+				if i.initErrorHandler != nil {
+					i.initErrorHandler(err)
+				}
 				i.logAndPanic(i.c, "Error initializing privided object %T:%s", obj, err.Error())
 			}
 			i.log(i.c, "Initialized %T", obj)
